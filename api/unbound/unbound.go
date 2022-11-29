@@ -82,7 +82,7 @@ func (opn *UnboundApi) HostOverrideCreate(hostOverride HostOverride) (string, er
 
 	container.HostOverride = hostOverride
 
-	response, _ := opn.Client().
+	response, err := opn.Client().
 		SetError(&coreapi.ServerError{}).
 		SetResult(&coreapi.ServerResult{}).
 		SetBody(container).
@@ -93,7 +93,7 @@ func (opn *UnboundApi) HostOverrideCreate(hostOverride HostOverride) (string, er
 		return srvResult.Uuid, nil
 	} else {
 		srvError := response.Error().(*coreapi.ServerError)
-		return "", errors.New(srvError.Message)
+		return "", errors.New(fmt.Sprintf("%s:%s", srvError.Message, err))
 	}
 }
 
