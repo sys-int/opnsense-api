@@ -1,12 +1,9 @@
 package unbound
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	coreapi "github.com/sys-int/opnsense-api/api"
-	"io"
 	"net/http"
 )
 
@@ -28,6 +25,14 @@ type HostOverride struct {
 	Uuid        string `json:"uuid"`
 }
 
+type HostContainer struct {
+	HostOverride HostOverride `json:"host"`
+}
+
+type HostsContainer struct {
+	HostOverrides []HostOverride `json:"rows"`
+}
+
 func (opn *UnboundApi) HostOverrideCreateOrUpdate(hostOverride HostOverride) (string, error) {
 	if hostOverride.Uuid == "" { // no uuid given use host / domain based fuzzy search
 		var searchResult, _ = opn.HostEntryGetByFQDN(hostOverride.Host, hostOverride.Domain)
@@ -47,139 +52,63 @@ func (opn *UnboundApi) HostOverrideCreateOrUpdate(hostOverride HostOverride) (st
 
 func (opn *UnboundApi) HostOverrideUpdate(hostOverride HostOverride) (string, error) {
 	// endpoint
-	var endpoint = opn.EndpointForPluginControllerMethod("unbound", "settings", "setHostOverride")
+	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "setHostOverride")
 	var fullPath = fmt.Sprintf("%s/%s", endpoint, hostOverride.Uuid)
 
-	var container struct {
-		HostOverride HostOverride `json:"host"`
-	}
+	var container HostContainer
 
 	container.HostOverride = hostOverride
-	// create our Request
-	jsonBody := new(bytes.Buffer)
-	if err := json.NewEncoder(jsonBody).Encode(container); err != nil {
-		return "", err
-	}
 
-	request, reqCreationErr := http.NewRequest("POST", fullPath, jsonBody)
-	if reqCreationErr != nil {
-		return "", reqCreationErr
-	}
-	request.Header.Set("Content-Type", "application/json")
+	response, _ := opn.Client().
+		SetError(&coreapi.ServerError{}).
+		SetResult(&coreapi.ServerResult{}).
+		SetBody(container).
+		Post(fullPath)
 
-	var response, reqErr = opn.Send(request)
-	if reqErr != nil {
-		return "", reqErr
-	}
-
-	if response.StatusCode == 200 {
-		var resultContainer struct {
-			ResultStatus string `json:"result"`
-			Uuid         string `json:"uuid"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&resultContainer); err != nil {
-			return "", err
-		}
-		// else
-		return resultContainer.Uuid, nil
+	if response.StatusCode() == http.StatusOK {
+		srvResult := response.Result().(*coreapi.ServerResult)
+		return srvResult.Uuid, nil
 	} else {
-		var container struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&container); err != nil {
-			return "", err
-		}
-
-		return "", errors.New(container.Message)
+		srvError := response.Error().(*coreapi.ServerError)
+		return "", errors.New(srvError.Message)
 	}
 }
 
 func (opn *UnboundApi) HostOverrideCreate(hostOverride HostOverride) (string, error) {
 	// endpoint
-	var endpoint = opn.EndpointForPluginControllerMethod("unbound", "settings", "addHostOverride")
+	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "addHostOverride")
 
-	var container struct {
-		HostOverride HostOverride `json:"host"`
-	}
+	var container HostContainer
 
 	container.HostOverride = hostOverride
-	// create our Request
-	jsonBody := new(bytes.Buffer)
-	if err := json.NewEncoder(jsonBody).Encode(container); err != nil {
-		return "", err
-	}
 
-	request, reqCreationErr := http.NewRequest("POST", endpoint, jsonBody)
-	if reqCreationErr != nil {
-		return "", reqCreationErr
-	}
-	request.Header.Set("Content-Type", "application/json")
+	response, _ := opn.Client().
+		SetError(&coreapi.ServerError{}).
+		SetResult(&coreapi.ServerResult{}).
+		SetBody(container).
+		Post(endpoint)
 
-	var response, reqErr = opn.Send(request)
-	if reqErr != nil {
-		return "", reqErr
-	}
-
-	if response.StatusCode == 200 {
-		var resultContainer struct {
-			ResultStatus string `json:"result"`
-			Uuid         string `json:"uuid"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&resultContainer); err != nil {
-			return "", err
-		}
-		// else
-		return resultContainer.Uuid, nil
+	if response.StatusCode() == http.StatusOK {
+		srvResult := response.Result().(*coreapi.ServerResult)
+		return srvResult.Uuid, nil
 	} else {
-		var container struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&container); err != nil {
-			return "", err
-		}
-
-		return "", errors.New(container.Message)
+		srvError := response.Error().(*coreapi.ServerError)
+		return "", errors.New(srvError.Message)
 	}
 }
 
 func (opn *UnboundApi) HostEntryGetByFQDN(host string, domain string) (HostOverride, error) {
-	// endpoint
-	var endpoint = opn.EndpointForPluginControllerMethod("unbound", "settings", "searchHostOverride")
-
-	// we search for the host first and compare the domain later (searchPhrase does not support searching for FQDN)
+	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "searchHostOverride")
 	var reqUrl = fmt.Sprintf("%s?searchPhrase=%s", endpoint, host)
-	// create our Request
-	var request, reqCreationErr = http.NewRequest("GET", reqUrl, nil)
+	response, _ := opn.Client().
+		SetError(&coreapi.ServerError{}).
+		SetResult(&HostsContainer{}).
+		Get(reqUrl)
 
-	if reqCreationErr != nil {
-		return HostOverride{}, reqCreationErr
-	}
+	if response.StatusCode() == 200 {
+		container := response.Result().(*HostsContainer)
 
-	// send it to the server
-	var response, reqErr = opn.Send(request)
-	if reqErr != nil {
-		bodyBytes, _ := io.ReadAll(response.Body)
-		bodyString := string(bodyBytes)
-		return HostOverride{}, errors.New(fmt.Sprintf("%s:%s", bodyString, reqErr))
-	}
-
-	if response.StatusCode == 200 {
-		var container struct {
-			Overrides []HostOverride `json:"rows"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&container); err != nil {
-			return HostOverride{}, err
-		}
-		// else
-
-		var allWithMatchingDomain = Filter(container.Overrides, func(override HostOverride) bool {
+		var allWithMatchingDomain = Filter(container.HostOverrides, func(override HostOverride) bool {
 			return override.Domain == domain
 		})
 
@@ -197,105 +126,73 @@ func (opn *UnboundApi) HostEntryGetByFQDN(host string, domain string) (HostOverr
 			}
 		}
 
-		// else
 		return allWithMatchingDomain[0], nil
-	} else if response.StatusCode == 404 {
+	} else if response.StatusCode() == 404 {
 		return HostOverride{}, &coreapi.NotFoundError{
 			Err:  nil,
 			Name: "hostentry",
 		}
 	} else {
-		var container struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		}
+		srvError := response.Error().(*coreapi.ServerError)
+		return HostOverride{}, errors.New(fmt.Sprintf("%s", srvError.Message))
+	}
+}
 
-		if err := json.NewDecoder(response.Body).Decode(&container); err != nil {
-			return HostOverride{}, err
+func (opn *UnboundApi) HostEntryGetByUuid(uuid string) (HostOverride, error) {
+	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "getHostOverride")
+	var fullPath = fmt.Sprintf("%s/%s", endpoint, uuid)
+
+	response, err := opn.Client().
+		SetResult(&HostContainer{}).
+		SetError(&coreapi.ServerError{}).
+		Get(fullPath)
+
+	if response.StatusCode() == http.StatusOK {
+		srvResult := response.Result().(*HostContainer)
+		return srvResult.HostOverride, err
+	} else if response.StatusCode() == http.StatusNotFound {
+		return HostOverride{}, &coreapi.NotFoundError{
+			Err:  nil,
+			Name: "hostentry",
 		}
-		return HostOverride{}, errors.New(fmt.Sprintf("%s", container.Message))
+	} else {
+		srvError := response.Error().(*coreapi.ServerError)
+		return HostOverride{}, errors.New(fmt.Sprintf("%s", srvError.Message))
 	}
 }
 
 func (opn *UnboundApi) HostOverrideList() ([]HostOverride, error) {
 	// endpoint
-	var endpoint = opn.EndpointForPluginControllerMethod("unbound", "settings", "searchHostOverride")
+	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "searchHostOverride")
 
-	// create our Request
-	var request, reqCreationErr = http.NewRequest("GET", endpoint, nil)
+	response, err := opn.Client().
+		SetResult(&HostsContainer{}).
+		SetError(&coreapi.ServerError{}).
+		Get(endpoint)
 
-	if reqCreationErr != nil {
-		return []HostOverride{}, reqCreationErr
-	}
-
-	// send it to the server
-	var response, reqErr = opn.Send(request)
-	if reqErr != nil {
-		bodyBytes, _ := io.ReadAll(response.Body)
-		bodyString := string(bodyBytes)
-		return []HostOverride{}, errors.New(fmt.Sprintf("%s:%s", bodyString, reqErr))
-	}
-
-	if response.StatusCode == 200 {
-		var container struct {
-			Overrides []HostOverride `json:"rows"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&container); err != nil {
-			return []HostOverride{}, err
-		}
-
-		// else
-		return container.Overrides, nil
+	if response.StatusCode() == 200 {
+		container := response.Result().(*HostsContainer)
+		return container.HostOverrides, nil
 	} else {
-		var container struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&container); err != nil {
-			return []HostOverride{}, err
-		}
-		return []HostOverride{}, errors.New(fmt.Sprintf("%s:%s", container.Message, reqErr))
+		srvError := response.Error().(*coreapi.ServerError)
+		return []HostOverride{}, errors.New(fmt.Sprintf("%s:%s", srvError.Message, err))
 	}
 }
 
 func (opn *UnboundApi) HostEntryRemove(uuid string) error {
-	// endpoint
-	var endpoint = opn.EndpointForPluginControllerMethod("unbound", "settings", "delHostOverride")
+	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "delHostOverride")
 	var fullPath = fmt.Sprintf("%s/%s", endpoint, uuid)
 
-	// create our Request
-	request, reqCreationErr := http.NewRequest("POST", fullPath, nil)
-	if reqCreationErr != nil {
-		return reqCreationErr
-	}
+	response, err := opn.Client().
+		SetError(&coreapi.ServerError{}).
+		SetResult(&coreapi.ServerResult{}).
+		Post(fullPath)
 
-	var response, reqErr = opn.Send(request)
-	if reqErr != nil {
-		return reqErr
-	}
-
-	if response.StatusCode == 200 {
-		var resultContainer struct {
-			Result string `json:"result"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&resultContainer); err != nil {
-			return err
-		}
-		// else
+	if response.StatusCode() == 200 {
 		return nil
 	} else {
-		var container struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		}
-
-		if err := json.NewDecoder(response.Body).Decode(&container); err != nil {
-			return err
-		}
-		return errors.New(fmt.Sprintf("%s:%s", container.Message, reqErr))
+		srvError := response.Error().(*coreapi.ServerError)
+		return errors.New(fmt.Sprintf("%s:%s", srvError.Message, err))
 	}
 }
 
@@ -308,7 +205,6 @@ func (opn *UnboundApi) HostEntryExists(host string, domain string) (bool, error)
 			return true, err
 		}
 	}
-	// else found something
 	return true, nil
 }
 

@@ -2,8 +2,8 @@ package api
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"net/http"
 	"net/url"
 )
@@ -15,19 +15,15 @@ type OPNsense struct {
 	NoSslVerify bool
 }
 
-func (opn *OPNsense) Send(request *http.Request) (*http.Response, error) {
-	var client = &http.Client{}
+func (opn *OPNsense) Client() *resty.Request {
 
-	certPool, _ := x509.SystemCertPool()
-	client.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: opn.NoSslVerify,
-			RootCAs:            certPool,
-		},
+	if opn.NoSslVerify {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+	client := resty.New()
+	client.SetBasicAuth(opn.ApiKey, opn.ApiSecret)
 
-	request.SetBasicAuth(opn.ApiKey, opn.ApiSecret)
-	return client.Do(request)
+	return client.R()
 }
 
 type NotFoundError struct {
@@ -40,6 +36,16 @@ type TooManyFoundError struct {
 	Err  error
 }
 
+type ServerError struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+type ServerResult struct {
+	ResultStatus string `json:"result"`
+	Uuid         string `json:"uuid"`
+}
+
 func (f *NotFoundError) Error() string {
 	return fmt.Sprintf("not found: %s", f.Name)
 }
@@ -49,16 +55,16 @@ func (f *TooManyFoundError) Error() string {
 }
 
 // EndpointForModule so basically api/<plugin>
-func (opn *OPNsense) EndpointForModule(module string) string {
-	return fmt.Sprintf("%s/api/%s", opn.BaseUrl.String(), module)
+func (opn *OPNsense) EndpointForModule(module Module) string {
+	return fmt.Sprintf("%s/api/%s", opn.BaseUrl.String(), module.String())
 }
 
 // EndpointForModuleController so basically api/<plugin>/<controller>
-func (opn *OPNsense) EndpointForModuleController(module string, controller string) string {
-	return fmt.Sprintf("%s/%s", opn.EndpointForModule(module), controller)
+func (opn *OPNsense) EndpointForModuleController(module Module, controller Controller) string {
+	return fmt.Sprintf("%s/%s", opn.EndpointForModule(module), controller.String())
 }
 
 // EndpointForPluginControllerMethod so basically api/<plugin>/<controller>/<method>
-func (opn *OPNsense) EndpointForPluginControllerMethod(module string, controller string, method string) string {
+func (opn *OPNsense) EndpointForPluginControllerMethod(module Module, controller Controller, method string) string {
 	return fmt.Sprintf("%s/%s", opn.EndpointForModuleController(module, controller), method)
 }
