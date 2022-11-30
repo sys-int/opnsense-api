@@ -14,11 +14,11 @@ type UnboundApi struct {
 
 type HostOverride struct {
 	// 0 for disabled, 1 for enabled
-	Enabled     string `json:"enabled"`
-	Host        string `json:"hostname"`
-	Domain      string `json:"domain"`
-	Ip          string `json:"server"`
-	Rr          RR     `json:"rr,omitempty"`          // A, MX, CNAME...
+	Enabled string `json:"enabled"`
+	Host    string `json:"hostname"`
+	Domain  string `json:"domain"`
+	Ip      string `json:"server"`
+	//	Rr          RR     `json:"rr,omitempty"`          // A, MX, CNAME...
 	Mxprio      string `json:"mxprio,omitempty"`      // 10, 20
 	Mx          string `json:"mx,omitempty"`          // mail.domain.tld ...
 	Description string `json:"description,omitempty"` // any arbitrary text
