@@ -43,7 +43,7 @@ type ServerError struct {
 
 type ServerResult struct {
 	ResultStatus string `json:"result"`
-	Uuid         string `json:"uuid"`
+	Uuid         string `json:"uuid,omitempty"`
 }
 
 func (f *NotFoundError) Error() string {

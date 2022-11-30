@@ -18,11 +18,11 @@ type HostOverride struct {
 	Host        string `json:"hostname"`
 	Domain      string `json:"domain"`
 	Ip          string `json:"server"`
-	Rr          string `json:"rr"`          // A, MX, CNAME...
-	Mxprio      string `json:"mxprio"`      // 10, 20
-	Mx          string `json:"mx"`          // mail.domain.tld ...
-	Description string `json:"description"` // any arbitrary text
-	Uuid        string `json:"uuid"`
+	Rr          string `json:"rr,omitempty"`          // A, MX, CNAME...
+	Mxprio      string `json:"mxprio,omitempty"`      // 10, 20
+	Mx          string `json:"mx,omitempty"`          // mail.domain.tld ...
+	Description string `json:"description,omitempty"` // any arbitrary text
+	Uuid        string `json:"uuid,omitempty"`
 }
 
 type HostContainer struct {
