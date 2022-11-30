@@ -22,7 +22,7 @@ type HostOverride struct {
 	Mxprio      string `json:"mxprio,omitempty"`      // 10, 20
 	Mx          string `json:"mx,omitempty"`          // mail.domain.tld ...
 	Description string `json:"description,omitempty"` // any arbitrary text
-	Uuid        string `json:"uuid,omitempty"`
+	Uuid        string `json:"-"`
 }
 
 type RR struct {
