@@ -41,11 +41,11 @@ type RR struct {
 }
 
 type HostContainer struct {
-	HostOverride HostOverride `json:"host"`
+	HostOverride HostOverride `json:"host,omitempty"`
 }
 
 type HostsContainer struct {
-	HostOverrides []HostOverride `json:"rows"`
+	HostOverrides []HostOverride `json:"rows,omitempty"`
 }
 
 func (opn *UnboundApi) HostOverrideCreateOrUpdate(hostOverride HostOverride) (string, error) {
