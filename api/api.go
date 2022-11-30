@@ -21,6 +21,7 @@ func (opn *OPNsense) Client() *resty.Request {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 	client := resty.New()
+	client.SetDebug(true)
 	client.SetBasicAuth(opn.ApiKey, opn.ApiSecret)
 
 	return client.R()
