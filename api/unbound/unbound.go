@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	coreapi "github.com/sys-int/opnsense-api/api"
+	"log"
 	"net/http"
 )
 
@@ -164,8 +165,10 @@ func (opn *UnboundApi) HostEntryGetByUuid(uuid string) (HostOverride, error) {
 
 	if response.StatusCode() == http.StatusOK && err == nil {
 		srvResult := response.Result().(*HostContainer)
+		log.Printf("Found HostOverride: %s.%s IP: %s", srvResult.HostOverride.Host, srvResult.HostOverride.Domain, srvResult.HostOverride.Ip)
 		return srvResult.HostOverride, err
 	} else {
+		log.Printf("No Host found for UUID: %s", uuid)
 		return HostOverride{}, &coreapi.NotFoundError{
 			Err:  nil,
 			Name: "hostentry",
