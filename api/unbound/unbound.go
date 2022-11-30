@@ -162,17 +162,14 @@ func (opn *UnboundApi) HostEntryGetByUuid(uuid string) (HostOverride, error) {
 		SetError(&coreapi.ServerError{}).
 		Get(fullPath)
 
-	if response.StatusCode() == http.StatusOK {
+	if response.StatusCode() == http.StatusOK && err == nil {
 		srvResult := response.Result().(*HostContainer)
 		return srvResult.HostOverride, err
-	} else if response.StatusCode() == http.StatusNotFound {
+	} else if response.StatusCode() == http.StatusNotFound || err != nil {
 		return HostOverride{}, &coreapi.NotFoundError{
 			Err:  nil,
 			Name: "hostentry",
 		}
-	} else {
-		srvError := response.Error().(*coreapi.ServerError)
-		return HostOverride{}, errors.New(fmt.Sprintf("%s", srvError.Message))
 	}
 }
 
