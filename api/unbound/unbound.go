@@ -6,6 +6,7 @@ import (
 	coreapi "github.com/sys-int/opnsense-api/api"
 	"log"
 	"net/http"
+	"time"
 )
 
 //goland:noinspection GoNameStartsWithPackageName
@@ -75,6 +76,7 @@ func (opn *UnboundApi) HostOverrideUpdate(hostOverride HostOverride) (string, er
 
 	container.HostOverride = hostOverride
 
+	time.Sleep(1 * time.Second)
 	response, _ := opn.Client().
 		SetError(&coreapi.ServerError{}).
 		SetResult(&coreapi.ServerResult{}).
@@ -98,6 +100,7 @@ func (opn *UnboundApi) HostOverrideCreate(hostOverride HostOverride) (string, er
 
 	container.HostOverride = hostOverride
 
+	time.Sleep(1 * time.Second)
 	response, err := opn.Client().
 		SetError(&coreapi.ServerError{}).
 		SetResult(&coreapi.ServerResult{}).
@@ -116,6 +119,7 @@ func (opn *UnboundApi) HostOverrideCreate(hostOverride HostOverride) (string, er
 func (opn *UnboundApi) HostEntryGetByFQDN(host string, domain string) (HostOverride, error) {
 	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "searchHostOverride")
 	var reqUrl = fmt.Sprintf("%s?searchPhrase=%s", endpoint, host)
+	time.Sleep(1 * time.Second)
 	response, _ := opn.Client().
 		SetError(&coreapi.ServerError{}).
 		SetResult(&HostsContainer{}).
@@ -158,6 +162,7 @@ func (opn *UnboundApi) HostEntryGetByUuid(uuid string) (HostOverride, error) {
 	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "getHostOverride")
 	var fullPath = fmt.Sprintf("%s/%s", endpoint, uuid)
 
+	time.Sleep(1 * time.Second)
 	response, err := opn.Client().
 		SetResult(&HostContainer{}).
 		SetError(&coreapi.ServerError{}).
@@ -198,6 +203,7 @@ func (opn *UnboundApi) HostEntryRemove(uuid string) error {
 	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Settings, "delHostOverride")
 	var fullPath = fmt.Sprintf("%s/%s", endpoint, uuid)
 
+	time.Sleep(1 * time.Second)
 	response, err := opn.Client().
 		SetError(&coreapi.ServerError{}).
 		SetResult(&coreapi.ServerResult{}).
