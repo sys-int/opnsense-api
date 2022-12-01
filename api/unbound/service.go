@@ -6,14 +6,13 @@ import (
 	coreapi "github.com/sys-int/opnsense-api/api"
 )
 
-func (opn *UnboundApi) ServiceRestart(uuid string) error {
+func (opn *UnboundApi) ServiceRestart() error {
 	var endpoint = opn.EndpointForPluginControllerMethod(coreapi.Unbound, coreapi.Service, "restart")
-	var fullPath = fmt.Sprintf("%s/%s", endpoint, uuid)
 
 	response, err := opn.Client().
 		SetError(&coreapi.ServerError{}).
 		SetResult(&coreapi.ServerResult{}).
-		Post(fullPath)
+		Post(endpoint)
 
 	if response.StatusCode() == 200 {
 		return nil
