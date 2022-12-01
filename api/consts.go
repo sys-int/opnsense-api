@@ -9,6 +9,7 @@ const (
 
 const (
 	Settings Controller = iota
+	Service  Controller = iota
 )
 
 func (s Module) String() string {
@@ -23,6 +24,8 @@ func (s Controller) String() string {
 	switch s {
 	case Settings:
 		return "settings"
+	case Service:
+		return "service"
 	}
 	return "unknown"
 }
