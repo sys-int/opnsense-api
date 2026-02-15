@@ -1,7 +1,7 @@
 module github.com/sys-int/opnsense-api
 
-go 1.19
+go 1.23.0
 
-require github.com/go-resty/resty/v2 v2.7.0
+require github.com/go-resty/resty/v2 v2.17.2
 
-require golang.org/x/net v0.0.0-20211029224645-99673261e6eb // indirect
+require golang.org/x/net v0.43.0 // indirect
